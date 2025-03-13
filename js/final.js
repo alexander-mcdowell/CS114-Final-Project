@@ -1,0 +1,2 @@
+// Run WebGL
+$(function() { webGLStart(); });

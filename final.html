@@ -16,7 +16,7 @@
 <!-- My Javascript -->
 <script type="text/javascript" src="js/final.js"></script>
 <script type="text/javascript" src="js/final-webgl.js"></script>
-<script type="text/javascript" src="js/generate-city.js"></script>
+<script type="text/javascript" src="js/generate-terrain.js"></script>
 
 <!-- Simple Vertex Shader (from PA1) -->
 <script id="shader-vs" type="x-shader/x-vertex">
@@ -26,9 +26,11 @@
 
     attribute vec3 aVertexPosition;     // Vertex position in object space
     attribute vec3 aVertexNormal;       // Vertex normal in object space
+    attribute vec3 aVertexColor;        // Vertex color attribute
 
     varying vec3 vPosition;             // Vertex position (camera space)
     varying vec3 vNormal;               // Vertex normal (camera space)
+    varying vec4 vColor;                // Vertex color
 
     void main(void) {
         vec4 camSpacePosition = uMVMatrix * vec4(aVertexPosition, 1.0);
@@ -38,6 +40,8 @@
 
         vec4 camSpaceNormal = uNMatrix * vec4(aVertexNormal, 0.0);
         vNormal = vec3(camSpaceNormal);
+
+        vColor = vec4(aVertexColor, 1.0);
     }
 </script>
 
@@ -46,8 +50,10 @@
     precision mediump float;
 
     uniform vec3 uLightPos;             // Light position in camera space
+
     varying vec3 vPosition;             // Fragment position (camera space)
     varying vec3 vNormal;               // Fragment normal (camera space)
+    varying vec4 vColor;                // Fragment color
 
     void main(void) {
         vec3 vLight = uLightPos - vPosition;
@@ -57,10 +63,10 @@
         vec3 vView = normalize(-vPosition);
         vec3 vHalf = normalize(vView + vLight);
         vec3 vNormal_ = normalize(vNormal);
-        if ( dot(vNormal_, vView) < 0.0 ) vNormal_ = -vNormal_;
+        if (dot(vNormal_, vView) < 0.0) vNormal_ = -vNormal_;
 
-        vec3 diffClr = vec3(0.2392, 0.5216, 0.7765);
-        float ambient = 0.2;
+        vec3 diffClr = vec3(vColor);
+        float ambient = 0.35;
 
         float diff = max(dot(vNormal_, vLight), 0.0);
         float spec = pow(max(dot(vNormal_, vHalf), 0.0), 10.0);
@@ -78,6 +84,9 @@
 
     <div style="margin-top:10px">
         <canvas id="canvas0" tabindex="0"></canvas>
+    </div>
+    <div class="button">
+        <button id="regen">Re-generate Terrain</button>
     </div>
 </body>
 

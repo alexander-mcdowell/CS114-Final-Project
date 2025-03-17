@@ -1,0 +1,7 @@
+Perlin Noise and World Generation:
+- https://www.redblobgames.com/maps/terrain-from-noise/
+- https://adrianb.io/2014/08/09/perlinnoise.html
+- https://gamedev.stackexchange.com/questions/23625/how-do-you-generate-tileable-perlin-noise
+
+Camera Controls:
+- https://www.songho.ca/opengl/gl_camera.html

@@ -1,3 +1,9 @@
+/**
+ * TODO:
+ * - Add trackball camera
+ * - City generation
+ */
+
 // Initialize GL object
 var gl;
 function initGL(canvas) {
@@ -21,7 +27,9 @@ function createShader(vsID, fsID) {
     shaderProg.vertexPositionAttribute = gl.getAttribLocation(shaderProg, "aVertexPosition");
     gl.enableVertexAttribArray(shaderProg.vertexPositionAttribute);
     shaderProg.vertexNormalAttribute = gl.getAttribLocation(shaderProg, "aVertexNormal");
-    gl.enableVertexAttribArray(shaderProg.vertexNormalAttribute);        
+    gl.enableVertexAttribArray(shaderProg.vertexNormalAttribute);
+    shaderProg.vertexColorAttribute = gl.getAttribLocation(shaderProg, "aVertexColor");
+    gl.enableVertexAttribArray(shaderProg.vertexColorAttribute);        
 
     // Update matrices and light position
     shaderProg.pMatrixUniform = gl.getUniformLocation(shaderProg, "uPMatrix");
@@ -39,11 +47,12 @@ function initShaders() {
 
 
 // Initialize vertex array and update element array buffers
-var vertexPositionBuffer, vertexNormalBuffer, indexBuffer;
+var vertexPositionBuffer, vertexNormalBuffer, vertexColorBuffer, indexBuffer;
 function initBuffers(createBuffers) {
     if (createBuffers) {
         vertexPositionBuffer = gl.createBuffer();
-        vertexNormalBuffer = gl.createBuffer();        
+        vertexNormalBuffer = gl.createBuffer();
+        vertexColorBuffer = gl.createBuffer();
         indexBuffer = gl.createBuffer();
     }
     updateBuffers();
@@ -54,8 +63,12 @@ function initBuffers(createBuffers) {
 function updateBuffers() {
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from(vertexPositions), gl.DYNAMIC_DRAW);
+    
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexNormalBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from(vertexNormals), gl.DYNAMIC_DRAW);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexColorBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, Float32Array.from(vertexColors), gl.DYNAMIC_DRAW);
 }
 
 // Matrices for vertex shader
@@ -66,15 +79,17 @@ var fov = 35;
 var front = 0.1;
 var back = 100.0;
 
+// Side-length for the 10 x 10 region
+var n = 250;
+
 // Camera position and basis vectors
-var cameraPos = [0.0, 4.0, -15.0];
+var cameraPos = [0.0, 10.0, -15];
 var cameraForward = [0.0, -0.5, 1.0];
 var cameraLeft = [-1.0, 0.0, 0.0];
 var cameraUp = [0.0, 1.0, 0.0];
 
 // Lighting control
-var lightMatrix = mat4.create();
-var lightPos = vec3.create();
+var lightPos = [0.0, 6.0, 0.0];
 
 function setUniforms() {
     gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
@@ -110,6 +125,7 @@ function lookAt(target) {
     lookAtMat[15] = 1.0;
 
     vec3.scale(cameraForward, -1.0, cameraForward);
+    vec3.scale(cameraLeft, -1.0, cameraLeft);
 
     mat4.multiply(mvMatrix, lookAtMat);
 }
@@ -120,12 +136,6 @@ function drawScene() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     mat4.perspective(fov, gl.viewportWidth/gl.viewportHeight, front, back, pMatrix);
-
-    mat4.identity(lightMatrix);
-    mat4.translate(lightMatrix, [0.0, 0.5, -10.0]);
-
-    lightPos.set([0.0, 2.5, 3.0]);
-    mat4.multiplyVec3(lightMatrix, lightPos);
 
     // Apply camera transformation and adjust camera basis if necessary
     mat4.identity(mvMatrix);
@@ -142,6 +152,9 @@ function drawScene() {
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexNormalBuffer);
     gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, 3, gl.FLOAT, false, 0, 0);
 
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexColorBuffer);
+    gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, 3, gl.FLOAT, false, 0, 0);
+
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);        
     gl.drawElements(gl.TRIANGLES, vertexIndices.length, gl.UNSIGNED_SHORT, 0);
 }
@@ -149,6 +162,12 @@ function drawScene() {
 function tick() {
     requestAnimationFrame(tick); 
     drawScene();
+    updateBuffers();
+}
+
+function generateTerrain() {
+    perlinConfigure();
+    generate();
 }
 
 function webGLStart() {
@@ -157,13 +176,15 @@ function webGLStart() {
     initGL(canvas);
     initShaders();
 
-    generate();
+    generateTerrain();
 
     initBuffers(true);
 
-    gl.clearColor(0.3, 0.3, 0.3, 1.0);
+    gl.clearColor(0.1, 0.1, 0.1, 1.0);
     gl.enable(gl.DEPTH_TEST);
     gl.disable(gl.CULL_FACE);
+
+    document.getElementById("regen").onclick = function() { generateTerrain(); };
 
     var deltaAngle = 5;
     canvas.addEventListener('keydown', (e) => {
@@ -191,6 +212,7 @@ function webGLStart() {
         else if (e.key == "s") {
             vec3.subtract(cameraPos, cameraForward, cameraPos);
         }
+        /*
         // Rotate Yaw Counter-Clockwise
         else if (e.key == "q") {
             cameraYaw -= deltaAngle;
@@ -200,7 +222,7 @@ function webGLStart() {
         else if (e.key == "e") {
             cameraYaw += deltaAngle;
             if (cameraYaw > 360.0) cameraYaw -= 360.0;
-        }
+        }*/
     });
 
     tick();

@@ -17,25 +17,11 @@ canvas:focus {
     outline:none;
 }
 
-div.panel {
-	margin-top: 10px;
-	padding: 5px;
-	border: 2px solid #666;
-	background: #eee;
-	float: left;
-}
-
-div.panel p {
-	font-weight: bold;
-	margin: 5px 0 5px 0;
-	padding: 0;
-}
-
-div.panel hr {
-	border: 0;
-  	height: 1px;
-    background: #333;
-    margin: 0 0 10px 0;
+div.button {
+	padding-left: 0;
+    padding-right: 0;
+	margin-left: auto;
+	margin-right: auto;
 }
 
 td {

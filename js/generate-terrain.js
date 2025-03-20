@@ -1,6 +1,9 @@
 // Vertex data
 var vertexPositions, vertexNormals, vertexColors, vertexIndices;
 
+var n = 250;
+var S = 20;
+
 // Fade function from 0 to 1 along 0 <= t <= 1
 function fade(t) {
     // 6t^5 - 15t^4 + 10t^3, the original function used in Perlin's paper
@@ -33,7 +36,8 @@ function perlinConfigure() {
     shuffle(permutations);
 }
 
-function perlin(x, y) {
+// Fractal Brownian Motion built on top of perlin noise
+function FBM(x, y) {
     var noise = 0.0;
     var k, persistence;
     var freq = 32.0;
@@ -73,12 +77,21 @@ function perlin(x, y) {
 }
 
 function elevation(x, y) {
-    var coeff = 1.1;
-    var alpha = 1.25;
+    var coeff = 1.2;
+    var alpha = 1.5;
 
-    // -10 <= x, y <= 10 ---> 0 <= x, y <= 128
-    perlinX = 32.0 * (x+10)/5.0; perlinY = 32.0 * (y+10)/5.0;
-    var noise = perlin(perlinX, perlinY);
+    // -S <= x, y <= S ---> 0 <= x, y <= 128
+    var noiseX = 32.0 * (x+S)/5.0; var noiseY = 32.0 * (y+S)/5.0;
+
+    var posOffset = [32, 20];
+    var posOffset2 = [1, 8]; var posOffset3 = [12, 35];
+    var scale = 4;
+
+    // Domain warping
+    var offset = [FBM(noiseX, noiseY), FBM(noiseX + posOffset[0], noiseY + posOffset[1])];
+    var offset2 = [FBM(noiseX + scale * offset[0] + posOffset2[0], noiseY + scale * offset[1] + posOffset2[1]),
+                  FBM(noiseX + scale * offset[0] + posOffset3[0], noiseY + scale * offset[1] + posOffset3[1])];
+    var noise = FBM(noiseX + scale * offset2[0], noiseY + scale * offset2[1]);
     return Math.pow(coeff * noise, alpha);
 }
 
@@ -91,8 +104,6 @@ function computeNormal(p1, p2, p3) {
     vec3.subtract(p3, p1, diff2);
     vec3.cross(diff1, diff2, normal);
     normal = vec3.normalize(normal);
-    if (vec3.dot(normal, diff1) < 0) vec3.scale(normal, -1, normal);
-
     return normal;
 }
 
@@ -108,16 +119,24 @@ function invLerp(a, b, x) {
 
 // Smoothly interpolate from c1 to c2 (t=0 yields c1, t=1 yields c2)
 function colorInterpolate(c1, c2, t) {
-    var c3x = c1[0] + (c2[0] - c1[0]) * t;
-    var c3y = c1[1] + (c2[1] - c1[1]) * t;
-    var c3z = c1[2] + (c2[2] - c1[2]) * t;
-    return [c3x*c3x, c3y*c3y, c3z*c3z];
+    // Control points
+    var p1 = [(c1[0] + c2[0])/2, (c1[1] + c2[1])/2, c1[2]];
+    var p2 = [c1[0], (c1[1] + c2[1])/2, (c1[2]+c2[2])/2];
+    // Interpolate
+    var c3 = [0.0, 0.0, 0.0];
+    var t_comp = 1-t;
+    for (var i = 0; i < 3; i++) {
+        // (1-t)^3 * c1 + 3*(1-t)^2*t*p1 + 3*(1-t)*t^2*p2 + t^3*c2
+        // (1-t)^2 * ((1-t)*c1 + 3*t*p1) + t^2*(3*(1-t)*p2 + t*c2)
+        c3[i] = t_comp*t_comp*(t_comp*c1[i] + 3*t*p1[i]) + t*t*(3*t_comp*p2[i] + t*c2[i]);
+    }
+    return c3;
 }
 
 // Return the corresponding perlin noise at point 0 <= u, v < 1
 function generate() {
-    var numVertices = (n+1)*(n+1);
-    var delta = 20.0/n;
+    var numVertices = n*n;
+    var delta = (2*S)/(n-1);
     var max_height = 5.0;
 
     var waterThresh = 0.3;
@@ -136,17 +155,17 @@ function generate() {
     vertexPositions = new Array(numVertices * 3);
     vertexNormals = new Array(numVertices * 3);
     vertexColors = new Array(numVertices * 3);
-    vertexIndices = new Array(numVertices * 3 * 2);
+    vertexIndices = new Array(numVertices * 6);
 
     var cornerIndex;
     // Set positions and colors for each vertex
     var X, Z, height, color;
-    for (var i = 0; i < n + 1; i++) {
-        for (var j = 0; j < n + 1; j++) {
-            cornerIndex = (n + 1) * i + j;
+    for (var i = 0; i < n; i++) {
+        for (var j = 0; j < n; j++) {
+            cornerIndex = n * i + j;
             // (x, y, z)
-            X = -10.0 + delta * i;
-            Z = 10.0 - delta * j;
+            X = -S + delta * i;
+            Z = S - delta * j;
             height = elevation(X, Z);
             vertexPositions[3 * cornerIndex] = X;
             vertexPositions[3 * cornerIndex + 1] = max_height * height;
@@ -180,65 +199,68 @@ function generate() {
     var p1, p2, p3;
     for (var i = 0; i < n; i++) {
         for (var j = 0; j < n; j++) {
-            // Check if the vertex lies at an edge or corner. If so, point straight up
-            if (i == 1 || i == n-1 || j == 1 || j == n-1) {
-                // (nx, ny, nz)
-                vertexNormals[3 * cornerIndex] = 0.0;
-                vertexNormals[3 * cornerIndex + 1] = 1.0;
-                vertexNormals[3 * cornerIndex + 2] = 0.0;
-            } else {
-                cornerIndex = (n + 1) * i + j;
-                var normal = vec3.create();
+            cornerIndex = n * i + j;
+            var normal = vec3.create();
 
-                // p1 = point whose normal we want.
+            // p1 = point whose normal we want.
+            p1 = vec3.create([vertexPositions[3 * cornerIndex], vertexPositions[3 * cornerIndex + 1], vertexPositions[3 * cornerIndex + 2]]);
+
+            if (j + 1 < n && i + 1 < n) {
                 // p2 = one to the right
                 // p3 = one below
-                p1 = vec3.create([vertexPositions[3 * cornerIndex], vertexPositions[3 * cornerIndex + 1], vertexPositions[3 * cornerIndex + 2]]);
                 p2 = vec3.create([vertexPositions[3 * (cornerIndex + 1)], vertexPositions[3 * (cornerIndex + 1) + 1], vertexPositions[3 * (cornerIndex + 1) + 2]]);
-                p3 = vec3.create([vertexPositions[3 * (cornerIndex + (n + 1))], vertexPositions[3 * (cornerIndex + (n + 1)) + 1], vertexPositions[3 * (cornerIndex + (n + 1)) + 2]]);
+                p3 = vec3.create([vertexPositions[3 * (cornerIndex + n)], vertexPositions[3 * (cornerIndex + n) + 1], vertexPositions[3 * (cornerIndex + n) + 2]]);
                 vec3.add(normal, computeNormal(p1, p2, p3), normal);
+            }
 
+            if (j >= 1 && i >= 1) {
                 // p2 = one to the left
                 // p3 = one above
                 p2 = vec3.create([vertexPositions[3 * (cornerIndex - 1)], vertexPositions[3 * (cornerIndex - 1) + 1], vertexPositions[3 * (cornerIndex - 1) + 2]]);
-                p3 = vec3.create([vertexPositions[3 * (cornerIndex - (n + 1))], vertexPositions[3 * (cornerIndex - (n + 1)) + 1], vertexPositions[3 * (cornerIndex - (n + 1)) + 2]]);
+                p3 = vec3.create([vertexPositions[3 * (cornerIndex - n)], vertexPositions[3 * (cornerIndex - n) + 1], vertexPositions[3 * (cornerIndex - n) + 2]]);
                 vec3.add(normal, computeNormal(p1, p2, p3), normal);
+            }
 
+            if (j + 1 < n && i >= 1) {
                 // p2 = one to the right
+                // p3 = one above
                 p2 = vec3.create([vertexPositions[3 * (cornerIndex + 1)], vertexPositions[3 * (cornerIndex + 1) + 1], vertexPositions[3 * (cornerIndex + 1) + 2]]);
+                p3 = vec3.create([vertexPositions[3 * (cornerIndex - n)], vertexPositions[3 * (cornerIndex - n) + 1], vertexPositions[3 * (cornerIndex - n) + 2]]);
                 vec3.add(normal, computeNormal(p1, p2, p3), normal);
+            }
 
+            if (j >= 1 && i + 1 < n) {
                 // p2 = one to the left
                 // p3 = one below
                 p2 = vec3.create([vertexPositions[3 * (cornerIndex - 1)], vertexPositions[3 * (cornerIndex - 1) + 1], vertexPositions[3 * (cornerIndex - 1) + 2]]);
-                p3 = vec3.create([vertexPositions[3 * (cornerIndex + (n + 1))], vertexPositions[3 * (cornerIndex + (n + 1)) + 1], vertexPositions[3 * (cornerIndex + (n + 1)) + 2]]);
+                p3 = vec3.create([vertexPositions[3 * (cornerIndex + n)], vertexPositions[3 * (cornerIndex + n) + 1], vertexPositions[3 * (cornerIndex + n) + 2]]);
                 vec3.add(normal, computeNormal(p1, p2, p3), normal);
-
-                // Finally set normal
-                vertexNormals[3 * cornerIndex] = normal[0];
-                vertexNormals[3 * cornerIndex + 1] = normal[1];
-                vertexNormals[3 * cornerIndex + 2] = normal[2];
             }
+
+            // Finally set normal
+            vertexNormals[3 * cornerIndex] = normal[0];
+            vertexNormals[3 * cornerIndex + 1] = normal[1];
+            vertexNormals[3 * cornerIndex + 2] = normal[2];
         }
     }
     
     // Form triangles
-    var triangleCounter = 0;
-    for (var i = 0; i < n; i++) {
-        for (var j = 0; j < n; j++) {
-            cornerIndex = (n + 1) * i + j;
+    var counter = 0;
+    for (var i = 0; i < n-1; i++) {
+        for (var j = 0; j < n-1; j++) {
+            cornerIndex = n * i + j;
 
             // Triangle one
-            vertexIndices[6 * triangleCounter] = cornerIndex;
-            vertexIndices[6 * triangleCounter + 1] = cornerIndex + 1;
-            vertexIndices[6 * triangleCounter + 2] = cornerIndex + (n + 1);
+            vertexIndices[6 * counter] = cornerIndex;
+            vertexIndices[6 * counter + 1] = cornerIndex + 1;
+            vertexIndices[6 * counter + 2] = cornerIndex + n;
 
             // Triangle two
-            vertexIndices[6 * triangleCounter + 3] = cornerIndex + 1;
-            vertexIndices[6 * triangleCounter + 4] = cornerIndex + (n + 1);
-            vertexIndices[6 * triangleCounter + 5] = cornerIndex + 1 + (n + 1);
+            vertexIndices[6 * counter + 3] = cornerIndex + 1;
+            vertexIndices[6 * counter + 4] = cornerIndex + n;
+            vertexIndices[6 * counter + 5] = cornerIndex + 1 + n;
 
-            triangleCounter += 1;
+            counter += 1;
         }
     }
 

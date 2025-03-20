@@ -1,9 +1,3 @@
-/**
- * TODO:
- * - Add trackball camera
- * - City generation
- */
-
 // Initialize GL object
 var gl;
 function initGL(canvas) {
@@ -79,17 +73,14 @@ var fov = 35;
 var front = 0.1;
 var back = 100.0;
 
-// Side-length for the 10 x 10 region
-var n = 250;
-
 // Camera position and basis vectors
 var cameraPos = [0.0, 10.0, -15];
-var cameraForward = [0.0, -0.5, 1.0];
-var cameraLeft = [-1.0, 0.0, 0.0];
-var cameraUp = [0.0, 1.0, 0.0];
+var cameraForward = vec3.normalize([0.0, -0.5, 1.0]);
+var cameraLeft = vec3.normalize([-1.0, 0.0, 0.0]);
+var cameraUp = vec3.normalize([0.0, 1.0, 0.0]);
 
 // Lighting control
-var lightPos = [0.0, 6.0, 0.0];
+var lightPos = [0.0, 5.0, 0.0];
 
 function setUniforms() {
     gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
@@ -205,24 +196,41 @@ function webGLStart() {
             vec3.subtract(cameraPos, cameraLeft, cameraPos);
         }
         // Move Forward
-        else if (e.key == "w") {
+        else if (e.key == "z") {
             vec3.add(cameraPos, cameraForward, cameraPos);
         }
         // Move Down
-        else if (e.key == "s") {
+        else if (e.key == "c") {
             vec3.subtract(cameraPos, cameraForward, cameraPos);
         }
-        /*
-        // Rotate Yaw Counter-Clockwise
-        else if (e.key == "q") {
-            cameraYaw -= deltaAngle;
-            if (cameraYaw < 0.0) cameraYaw += 360.0;
+        else {
+            var c_val = Math.cos(deltaAngle * Math.PI / 180);
+            var s_val = Math.sin(deltaAngle * Math.PI / 180);
+            // Rotate Yaw Counter-Clockwise
+            if (e.key == "a") {
+                var oldCameraForward = [cameraForward[0], cameraForward[1], cameraForward[2]]
+                for (var i = 0; i < 3; i++) cameraForward[i] = c_val * cameraForward[i] + s_val * cameraLeft[i];
+                for (var i = 0; i < 3; i++) cameraLeft[i] = -s_val * oldCameraForward[i] + c_val * cameraLeft[i];
+            }
+            // Rotate Yaw Clockwise
+            else if (e.key == "d") {
+                var oldCameraForward = [cameraForward[0], cameraForward[1], cameraForward[2]]
+                for (var i = 0; i < 3; i++) cameraForward[i] = c_val * cameraForward[i] - s_val * cameraLeft[i];
+                for (var i = 0; i < 3; i++) cameraLeft[i] = s_val * oldCameraForward[i] + c_val * cameraLeft[i];
+            }
+            // Rotate Pitch Counter-Clockwise
+            else if (e.key == "w") {
+                var oldCameraForward = [cameraForward[0], cameraForward[1], cameraForward[2]]
+                for (var i = 0; i < 3; i++) cameraForward[i] = c_val * cameraForward[i] - s_val * cameraUp[i];
+                for (var i = 0; i < 3; i++) cameraUp[i] = s_val * oldCameraForward[i] + c_val * cameraUp[i];
+            }
+            // Rotate Pitch Clockwise
+            else if (e.key == "s") {
+                var oldCameraForward = [cameraForward[0], cameraForward[1], cameraForward[2]]
+                for (var i = 0; i < 3; i++) cameraForward[i] = c_val * cameraForward[i] + s_val * cameraUp[i];
+                for (var i = 0; i < 3; i++) cameraUp[i] = -s_val * oldCameraForward[i] + c_val * cameraUp[i];
+            }
         }
-        // Rotate Yaw Clockwise
-        else if (e.key == "e") {
-            cameraYaw += deltaAngle;
-            if (cameraYaw > 360.0) cameraYaw -= 360.0;
-        }*/
     });
 
     tick();

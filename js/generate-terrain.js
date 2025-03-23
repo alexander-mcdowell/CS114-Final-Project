@@ -72,7 +72,7 @@ function fractal(x, y) {
         noise += baseNoise/k;
     }
 
-    // Noise is in the range -1 to 1, so reshape to 0 to 1 range.
+    // Noise is in the range -1 to 1, so project to 0 to 1 range.
     return (noise+1)/2.0;
 }
 
@@ -80,8 +80,8 @@ var coeff = 1.2;
 var alpha = 1.5;
 
 function elevation(x, y) {
-    // -S <= x, y <= S ---> 0 <= x, y <= 128
-    var noiseX = 32.0 * (x+S)/5.0; var noiseY = 32.0 * (y+S)/5.0;
+    // -S <= x, y <= S ---> 0 <= x, y <= 127
+    var noiseX = 127 * (x+S)/(2*S); var noiseY = 127 * (y+S)/(2*S);
 
     var posOffset = [32, 20];
     var posOffset2 = [1, 8]; var posOffset3 = [12, 35];
@@ -248,25 +248,4 @@ function generate() {
             counter += 1;
         }
     }
-
-    // // (x, y, z)
-    // vertexPositions = [
-    //     // Base
-    //     -n, 0.0, n,
-    //     n, 0.0, n,
-    //     -n, 0.0, -n,
-    //     n, 0.0, -n   
-    // ];
-
-    // // (nx, ny, nz)
-    // vertexNormals = [
-    //     0.0, 1.0, 0.0,
-    //     0.0, 1.0, 0.0,
-    //     0.0, 1.0, 0.0,
-    //     0.0, 1.0, 0.0
-    // ];
-
-    // vertexIndices = [
-    //     0, 1, 2, 1, 2, 3
-    // ];
 }

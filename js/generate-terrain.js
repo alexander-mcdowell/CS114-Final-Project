@@ -76,10 +76,10 @@ function FBM(x, y) {
     return (noise+1)/2.0;
 }
 
-function elevation(x, y) {
-    var coeff = 1.2;
-    var alpha = 1.5;
+var coeff = 1.2;
+var alpha = 1.5;
 
+function elevation(x, y) {
     // -S <= x, y <= S ---> 0 <= x, y <= 128
     var noiseX = 32.0 * (x+S)/5.0; var noiseY = 32.0 * (y+S)/5.0;
 
@@ -197,6 +197,7 @@ function generate() {
 
     // Set normals for each vertex
     var p1, p2, p3;
+    var deltaIs = [-1, 0, 1, 1, 0, -1]; var deltaJs = [0, 1, 1, 0, -1, -1];
     for (var i = 0; i < n; i++) {
         for (var j = 0; j < n; j++) {
             cornerIndex = n * i + j;
@@ -205,37 +206,21 @@ function generate() {
             // p1 = point whose normal we want.
             p1 = vec3.create([vertexPositions[3 * cornerIndex], vertexPositions[3 * cornerIndex + 1], vertexPositions[3 * cornerIndex + 2]]);
 
-            if (j + 1 < n && i + 1 < n) {
-                // p2 = one to the right
-                // p3 = one below
-                p2 = vec3.create([vertexPositions[3 * (cornerIndex + 1)], vertexPositions[3 * (cornerIndex + 1) + 1], vertexPositions[3 * (cornerIndex + 1) + 2]]);
-                p3 = vec3.create([vertexPositions[3 * (cornerIndex + n)], vertexPositions[3 * (cornerIndex + n) + 1], vertexPositions[3 * (cornerIndex + n) + 2]]);
+            // Use surrounding six points to compute the normal
+            // https://stackoverflow.com/questions/6656358/calculating-normals-in-a-triangle-mesh/21660173#21660173
+            for (var k = 0; k < 6; k++) {
+                var di = deltaIs[k], dj = deltaJs[k];
+                if (!(0 <= i + di < n && 0 <= j + dj < n)) continue
+                var di2 = deltaIs[(k+1)%6], dj2 = deltaJs[(k+1)%6];
+                if (!(0 <= i + di2 < n && 0 <= j + dj2 < n)) continue
+    
+                var cornerIndex2 = n * (i+di) + (j+dj);
+                var cornerIndex3 = n * (i+di2) + (j+dj2);
+                p2 = vec3.create([vertexPositions[3 * cornerIndex2], vertexPositions[3 * cornerIndex2 + 1], vertexPositions[3 * cornerIndex2 + 2]]);
+                p3 = vec3.create([vertexPositions[3 * cornerIndex3], vertexPositions[3 * cornerIndex3 + 1], vertexPositions[3 * cornerIndex3 + 2]]);
                 vec3.add(normal, computeNormal(p1, p2, p3), normal);
             }
-
-            if (j >= 1 && i >= 1) {
-                // p2 = one to the left
-                // p3 = one above
-                p2 = vec3.create([vertexPositions[3 * (cornerIndex - 1)], vertexPositions[3 * (cornerIndex - 1) + 1], vertexPositions[3 * (cornerIndex - 1) + 2]]);
-                p3 = vec3.create([vertexPositions[3 * (cornerIndex - n)], vertexPositions[3 * (cornerIndex - n) + 1], vertexPositions[3 * (cornerIndex - n) + 2]]);
-                vec3.add(normal, computeNormal(p1, p2, p3), normal);
-            }
-
-            if (j + 1 < n && i >= 1) {
-                // p2 = one to the right
-                // p3 = one above
-                p2 = vec3.create([vertexPositions[3 * (cornerIndex + 1)], vertexPositions[3 * (cornerIndex + 1) + 1], vertexPositions[3 * (cornerIndex + 1) + 2]]);
-                p3 = vec3.create([vertexPositions[3 * (cornerIndex - n)], vertexPositions[3 * (cornerIndex - n) + 1], vertexPositions[3 * (cornerIndex - n) + 2]]);
-                vec3.add(normal, computeNormal(p1, p2, p3), normal);
-            }
-
-            if (j >= 1 && i + 1 < n) {
-                // p2 = one to the left
-                // p3 = one below
-                p2 = vec3.create([vertexPositions[3 * (cornerIndex - 1)], vertexPositions[3 * (cornerIndex - 1) + 1], vertexPositions[3 * (cornerIndex - 1) + 2]]);
-                p3 = vec3.create([vertexPositions[3 * (cornerIndex + n)], vertexPositions[3 * (cornerIndex + n) + 1], vertexPositions[3 * (cornerIndex + n) + 2]]);
-                vec3.add(normal, computeNormal(p1, p2, p3), normal);
-            }
+            vec3.normalize(normal);
 
             // Finally set normal
             vertexNormals[3 * cornerIndex] = normal[0];

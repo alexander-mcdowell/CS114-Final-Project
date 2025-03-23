@@ -24,6 +24,14 @@ div.button {
 	margin-right: auto;
 }
 
+div.panel {
+	margin-top: 10px;
+	padding: 5px;
+	border: 2px solid #666;
+	background: #eee;
+	float: center;
+}
+
 td {
 	padding: 3px 0 3px 0;
 }

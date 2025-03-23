@@ -81,12 +81,51 @@
 <!-- HTML -->
 <body>
     <h1>CS114 --- Final Project</h1>
+    <h4> A simple randomly-generated terrain explorer built on top of Perlin Noise. </h4>
 
     <div style="margin-top:10px">
         <canvas id="canvas0" tabindex="0"></canvas>
     </div>
-    <div class="button">
-        <button id="regen">Re-generate Terrain</button>
+    <div class="panel">
+        <div class="panel-heading">
+            <h2>Terrain Settings</h2>
+        </div>
+        <div class="panel-body">
+            <div class="button">
+                <button id="regen">Re-generate Terrain</button>
+            </div>
+        </div>
+        <p> Changes to terrain parameters only take effect after terrain is re-generated. </p>
+        <table>
+            <tr>
+                <td>Alpha</td>
+                <td>
+                    <input type="range" min="50" max="300" value="150" onchange="updateAlpha(this.value);">
+                    (<span id="alpha">1.5</span>)
+                </td>
+            </tr>
+            <tr>
+                <td>Coeff</td>
+                <td>
+                    <input type="range" min="50" max="200" value="120" onchange="updateCoeff(this.value);">
+                    (<span id="coeff">1.2</span>)
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="panel">
+        <div class="panel-heading">
+            <h2> Controls: </h2>
+        </div>
+        <div class="panel-body">
+            <ul>
+                <li> Left/Right Arrow --- Move camera left/right. </li>
+                <li> Up/Down Arrow --- Move camera up/down. </li>
+                <li> Z/C --- Move camera forward/backwards. </li>
+                <li> W/S --- Pitch camera down/up. </li>
+                <li> A/D --- Turn camera left/right (along camera basis) </li>
+            </ul>
+        </div>
     </div>
 </body>
 

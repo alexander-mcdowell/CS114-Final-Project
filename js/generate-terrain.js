@@ -36,8 +36,8 @@ function perlinConfigure() {
     shuffle(permutations);
 }
 
-// Fractal Brownian Motion built on top of perlin noise
-function FBM(x, y) {
+// Fractal noise built on top of perlin noise
+function fractal(x, y) {
     var noise = 0.0;
     var k, persistence;
     var freq = 32.0;
@@ -88,10 +88,10 @@ function elevation(x, y) {
     var scale = 4;
 
     // Domain warping
-    var offset = [FBM(noiseX, noiseY), FBM(noiseX + posOffset[0], noiseY + posOffset[1])];
-    var offset2 = [FBM(noiseX + scale * offset[0] + posOffset2[0], noiseY + scale * offset[1] + posOffset2[1]),
-                  FBM(noiseX + scale * offset[0] + posOffset3[0], noiseY + scale * offset[1] + posOffset3[1])];
-    var noise = FBM(noiseX + scale * offset2[0], noiseY + scale * offset2[1]);
+    var offset = [fractal(noiseX, noiseY), fractal(noiseX + posOffset[0], noiseY + posOffset[1])];
+    var offset2 = [fractal(noiseX + scale * offset[0] + posOffset2[0], noiseY + scale * offset[1] + posOffset2[1]),
+                  fractal(noiseX + scale * offset[0] + posOffset3[0], noiseY + scale * offset[1] + posOffset3[1])];
+    var noise = fractal(noiseX + scale * offset2[0], noiseY + scale * offset2[1]);
     return Math.pow(coeff * noise, alpha);
 }
 
@@ -107,7 +107,7 @@ function computeNormal(p1, p2, p3) {
     return normal;
 }
 
-// Linear interpolation from a to b (t=0 yields a, t=1 yields b)
+// Linear interpolation from a to b (t=0 yields a, t=1 yields b )
 function lerp(a, b, t) {
     return a + (b - a) * t;
 }
